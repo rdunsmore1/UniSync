@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+coverage
+.turbo
+.DS_Store
+.env
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+apps/api/prisma/dev.db
+packages/db/prisma/dev.db

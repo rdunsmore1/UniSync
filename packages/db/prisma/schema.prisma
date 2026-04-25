@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  VIEWER
+  MEMBER
+}
+
+enum OrganizationVisibilityStatus {
+  UNLISTED
+  LISTED
+  AUTO_HIDDEN
+  SUSPENDED
+}
+
+enum MessageScope {
+  ROOM
+  DIRECT
+}
+
+enum EventRsvpStatus {
+  GOING
+  INTERESTED
+  NOT_GOING
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  IMPERSONATION
+  POLICY_VIOLATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  DISMISSED
+  ACTIONED
+}
+
+enum OrganizationAccessMode {
+  OPEN
+  INVITE_ONLY
+}
+
+model University {
+  id          String                  @id @default(cuid())
+  name        String
+  slug        String                  @unique
+  shortName   String?
+  city        String?
+  state       String?
+  country     String                  @default("US")
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  domains     UniversityEmailDomain[]
+  users       User[]
+  organizations Organization[]
+  tutorProfiles TutorProfile[]
+  events      Event[]
+}
+
+model UniversityEmailDomain {
+  id           String     @id @default(cuid())
+  domain       String     @unique
+  isPrimary    Boolean    @default(false)
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+}
+
+model User {
+  id               String                       @id @default(cuid())
+  universityId     String
+  email            String                       @unique
+  passwordHash     String
+  firstName        String
+  lastName         String
+  profileImageUrl  String?
+  bio              String?
+  isEmailVerified  Boolean                      @default(false)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  university       University                   @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  verificationTokens EmailVerificationToken[]
+  sessions         Session[]
+  memberships      OrganizationMembership[]
+  ownedOrganizations Organization[]
+  roomMessages     RoomMessage[]
+  roomMessageReactions RoomMessageReaction[]
+  createdEvents    Event[]
+  eventRsvps       EventRsvp[]
+  tutorProfile     TutorProfile?
+  tutorConversationsStarted DirectConversation[] @relation("ConversationInitiator")
+  directConversationMemberships DirectConversationParticipant[]
+  directMessages   DirectMessage[]
+  organizationReports OrganizationReport[]
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id                     String                       @id @default(cuid())
+  universityId           String
+  ownerId                String
+  name                   String
+  slug                   String
+  description            String
+  category               String
+  accessMode             OrganizationAccessMode       @default(OPEN)
+  tags                   String[]                     @default([])
+  bannerUrl              String?
+  logoUrl                String?
+  visibilityStatus       OrganizationVisibilityStatus @default(UNLISTED)
+  listingEligibleAt      DateTime?
+  autoHiddenAt           DateTime?
+  memberCountCache       Int                          @default(1)
+  eventCountCache        Int                          @default(0)
+  openReportCountCache   Int                          @default(0)
+  reportScoreCache       Int                          @default(0)
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+  university             University                   @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  owner                  User                         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  sections               OrganizationSection[]
+  rooms                  Room[]
+  memberships            OrganizationMembership[]
+  events                 Event[]
+  reports                OrganizationReport[]
+
+  @@unique([universityId, slug])
+}
+
+model OrganizationSection {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rooms          Room[]
+}
+
+model Room {
+  id             String       @id @default(cuid())
+  organizationId String
+  sectionId      String?
+  parentRoomId   String?
+  name           String
+  slug           String
+  description    String?
+  topic          String?
+  sortOrder      Int          @default(0)
+  isPrivate      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  section        OrganizationSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  parentRoom     Room?        @relation("RoomHierarchy", fields: [parentRoomId], references: [id], onDelete: Cascade)
+  subRooms       Room[]       @relation("RoomHierarchy")
+  messages       RoomMessage[]
+
+  @@unique([organizationId, slug])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+}
+
+model RoomMessage {
+  id               String               @id @default(cuid())
+  roomId           String
+  authorId         String
+  replyToMessageId String?
+  body             String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  room             Room                 @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  author           User                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replyToMessage   RoomMessage?         @relation("RoomMessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          RoomMessage[]        @relation("RoomMessageReplies")
+  reactions        RoomMessageReaction[]
+}
+
+model RoomMessageReaction {
+  id        String      @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+  message   RoomMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId, emoji])
+}
+
+model Event {
+  id             String       @id @default(cuid())
+  organizationId String
+  universityId   String
+  createdById    String
+  title          String
+  slug           String
+  description    String
+  location       String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  capacity       Int?
+  isPublished    Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  university     University   @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  createdBy      User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  rsvps          EventRsvp[]
+
+  @@unique([organizationId, slug])
+}
+
+model EventRsvp {
+  id        String          @id @default(cuid())
+  eventId    String
+  userId     String
+  status     EventRsvpStatus @default(GOING)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  event      Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId, status])
+}
+
+model TutorProfile {
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  universityId   String
+  headline       String
+  description    String
+  hourlyRateCents Int?
+  availability   Json
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  university     University   @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  subjects       TutorSubject[]
+}
+
+model TutorSubject {
+  id            String       @id @default(cuid())
+  tutorProfileId String
+  name          String
+  tutorProfile  TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+}
+
+model DirectConversation {
+  id            String                         @id @default(cuid())
+  initiatedById String
+  createdAt     DateTime                       @default(now())
+  updatedAt     DateTime                       @updatedAt
+  initiatedBy   User                           @relation("ConversationInitiator", fields: [initiatedById], references: [id], onDelete: Restrict)
+  participants  DirectConversationParticipant[]
+  messages      DirectMessage[]
+}
+
+model DirectConversationParticipant {
+  id             String             @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime           @default(now())
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model DirectMessage {
+  id             String             @id @default(cuid())
+  conversationId String
+  authorId       String
+  body           String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author         User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model OrganizationReport {
+  id              String       @id @default(cuid())
+  organizationId  String
+  reporterUserId  String
+  reason          ReportReason
+  details         String?
+  status          ReportStatus @default(OPEN)
+  createdAt       DateTime     @default(now())
+  reviewedAt      DateTime?
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reporter        User         @relation(fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, reporterUserId])
+}

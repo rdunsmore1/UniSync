@@ -1,0 +1,17 @@
+{
+  "name": "unisync",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev"
+  },
+  "devDependencies": {
+    "turbo": "^1.12.0"
+  }
+}
+
+ 
