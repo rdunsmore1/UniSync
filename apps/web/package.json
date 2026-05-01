@@ -10,8 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@unisync/types": "workspace:*",
-    "@unisync/ui": "workspace:*",
+    "@unisync/types": "file:../../packages/types",
+    "@unisync/ui": "file:../../packages/ui",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
