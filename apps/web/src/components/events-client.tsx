@@ -117,6 +117,7 @@ export function EventsClient() {
                   </div>
                   <div className="event-card-footer">
                     <EventRsvpControls
+                      compact
                       currentUserRsvp={event.currentUserRsvp}
                       eventId={event.id}
                       initialCounts={event.rsvpCounts}
@@ -138,23 +139,6 @@ export function EventsClient() {
                         );
                       }}
                     />
-                    {Boolean(event.attendeePreview.length) && (
-                      <div className="attendee-preview-block">
-                        <strong>Going</strong>
-                        <div className="attendee-preview-row">
-                          {event.attendeePreview.slice(0, 3).map((attendee) => (
-                            <span className="meta-chip meta-chip-soft" key={attendee.userId}>
-                              {attendee.name}
-                            </span>
-                          ))}
-                          {event.attendeePreview.length > 3 && (
-                            <span className="meta-chip meta-chip-soft">
-                              +{event.attendeePreview.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </Card>
               ))}

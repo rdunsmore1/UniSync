@@ -913,6 +913,10 @@ select {
   gap: 0.55rem;
 }
 
+.rsvp-panel-compact {
+  gap: 0.35rem;
+}
+
 .rsvp-button-row {
   display: flex;
   flex-wrap: wrap;
@@ -947,6 +951,21 @@ select {
   gap: 0.55rem;
   color: rgba(31, 41, 55, 0.76);
   font: 500 0.8rem/1.35 Arial, sans-serif;
+}
+
+.rsvp-panel-compact .rsvp-button-row {
+  gap: 0.35rem;
+}
+
+.rsvp-panel-compact .rsvp-button {
+  min-height: 34px;
+  padding: 0.48rem 0.72rem;
+  font-size: 0.76rem;
+}
+
+.rsvp-panel-compact .rsvp-counts {
+  gap: 0.4rem;
+  font-size: 0.74rem;
 }
 
 .rsvp-message {

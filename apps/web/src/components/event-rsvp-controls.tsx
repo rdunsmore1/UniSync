@@ -29,6 +29,7 @@ interface EventRsvpControlsProps {
     confirmationMessage: string;
     isFull: boolean;
   }) => void;
+  compact?: boolean;
 }
 
 const buttonCopy: Record<RsvpStatus, string> = {
@@ -56,6 +57,7 @@ export function EventRsvpControls({
   isPast,
   isFull,
   onUpdated,
+  compact = false,
 }: EventRsvpControlsProps) {
   const [selectedStatus, setSelectedStatus] = useState<RsvpStatus | null>(
     currentUserRsvp,
@@ -124,7 +126,7 @@ export function EventRsvpControls({
   }
 
   return (
-    <div className="rsvp-panel">
+    <div className={compact ? "rsvp-panel rsvp-panel-compact" : "rsvp-panel"}>
       <div className="rsvp-button-row">
         {(["GOING", "INTERESTED", "NOT_GOING"] as const).map((status) => {
           const isActive = selectedStatus === status;
@@ -151,10 +153,10 @@ export function EventRsvpControls({
         <span>{counts.interested} interested</span>
         <span>{counts.notGoing} not going</span>
       </div>
-      {message && <p className="rsvp-message">{message}</p>}
-      {error && <p className="form-error">{error}</p>}
-      {isPast && <p className="muted">This event has already started.</p>}
-      {isFull && selectedStatus !== "GOING" && (
+      {!compact && message && <p className="rsvp-message">{message}</p>}
+      {!compact && error && <p className="form-error">{error}</p>}
+      {!compact && isPast && <p className="muted">This event has already started.</p>}
+      {!compact && isFull && selectedStatus !== "GOING" && (
         <p className="muted">This event is currently full for new attendees.</p>
       )}
     </div>
